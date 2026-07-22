@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: rsync-target
+  namespace: ${NAMESPACE}
+
+spec:
+  replicas: ${REPLICAS}
+
+  selector:
+    matchLabels:
+      app: rsync-target
+
+  template:
+    metadata:
+      labels:
+        app: rsync-target
+
+    spec:
+      containers:
+      - name: rsync-target
+
+        image: ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+        imagePullPolicy: IfNotPresent
+
+        env:
+        - name: USER_NAME
+          value: "${ARCHIVE_USER}"
+
+        - name: PUID
+          value: "${PUID}"
+
+        - name: PGID
+          value: "${PGID}"
+
+        - name: TZ
+          value: "${TIMEZONE}"
+
+        - name: PUBLIC_KEY_FILE
+          value: "/config/id_ed25519.pub"
+
+        ports:
+        - containerPort: ${CONTAINER_PORT}
+
+        volumeMounts:
+        - name: archive-storage
+          mountPath: /archive
+
+        - name: ssh-key
+          mountPath: /config/id_ed25519.pub
+          subPath: id_ed25519.pub
+          readOnly: true
+
+      volumes:
+      - name: archive-storage
+        persistentVolumeClaim:
+          claimName: ${ARCHIVE_PVC}
+
+      - name: ssh-key
+        secret:
+          secretName: ${AUTHORIZED_KEYS_SECRET}
